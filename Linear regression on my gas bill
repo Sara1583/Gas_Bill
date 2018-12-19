@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec 19 10:14:45 2018
+
+@author: sarasharick
+"""
+
+# Importing the libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+#import dataset
+gas = pd.read_csv('AccountEnergyUsage.csv')
+
+#Check column names
+gas.columns
+
+#Check for null values
+gas.isna().sum()
+
+#drop columns with no information
+gas.drop(['Prior read date', 'Prior read type ', 'Prior read ',
+       'Current read date', 'Current read type', 'Current read', 'CCFs used',
+       'Conversion factor', 'Heating Degree Days'], axis=1, inplace=True)
+
+
+#Add column for Average Daily usage in Therms
+gas['Average daily usage'] = [6.10, 3.27, 0.39, 0.36, 0.33, 0.34, 0.48, 1.80, 5.00, 5.14, 7.00, 8.28, 5.28, 2.67, 0.61, 0.70, 0.41]
+
+#Add column for Billing period start date
+gas['Period_start'] = ['2018/11/14', '2018/10/13', '2018/09/14', '2018/08/14', '2018/07/14', '2018/06/14', '2018/05/15', '2018/04/13', '2018/03/14', '2018/02/13', '2018/01/12', '2017/12/14', '2017/11/14', '2017/10/14', '2017/09/15', '2017/08/15', '2017/07/13']
+
+#Add column for Billing period end date
+gas['Period_end'] = ['2018/12/13', '2018/11/13', '2018/10/12', '2018/09/13', '2018/08/13', '2018/07/13', '2018/06/13', '2018/05/14', '2018/04/12', '2018/03/13', '2018/02/12', '2018/01/11', '2017/12/13', '2017/11/13', '2017/10/13', '2017/09/14', '2017/08/14']
+
+#Adjust bill month column
+gas['Bill month'] = ['2018/12/01', '2018/11/01', '2018/10/01', '2018/09/01', '2018/08/01', '2018/07/01', '2018/06/01', '2018/05/01', '2018/04/01', '2018/03/01', '2018/02/01', '2018/01/01', '2017/12/01', '2017/11/01', '2017/10/01', '2017/09/01', '2017/08/01']
+
+#Add column for Bill amount in dolars
+gas['Bill$'] = [192.65, 112.49, 24.58, 23.17, 13.46, 20.57, 28.25, 69.89, 145.34, 149.97, 228.66, 162.99, 149.26, 86.08, 59.84, 48.09, 54.91]
+
+#Visualization 1
+g = sns.PairGrid(gas)
+g.map(plt.scatter)
+
+#Visualization 2
+g = sns.PairGrid(gas)
+g.map_upper(plt.scatter)
+g.map_lower(sns.kdeplot)
+g.map_diag(sns.kdeplot, lw=3, legend=True)
+
+#Visualization 3
+plt.scatter(x = gas['Average daily temperature'], y = gas['Average daily usage'], color='blue')
+plt.title('Average use by Temp')
+plt.xlabel('Average Daily Temp')
+plt.ylabel('Average Daily Use')
+plt.show()
+
+#Visualization 4
+plt.scatter(x = gas['Average daily usage'], y = gas['Bill$'], color='blue')
+plt.title('Average use by Bill')
+plt.xlabel('Average Daily Usage')
+plt.ylabel('Bill Amount')
+plt.show()
+
+#Visualization 5
+fig, ax = plt.subplots()
+ax.plot(gas['Bill month'], gas['Average daily usage'])
+
+ax.set(xlabel='Bill month', ylabel='avg daily use)',
+       title='My gas use') 
+ax.grid()
+plt.show()
+
+#Predicting Average daily use based on Average daily temp
+X = gas.iloc[:, 4:5].values #Average daily temp column
+y = gas.iloc[:, 3:4].values #Average daily use column
+
+# Fitting Linear Regression to the dataset
+from sklearn.linear_model import LinearRegression
+lin_reg = LinearRegression()
+lin_reg.fit(X, y)
+
+# Fitting Polynomial Regression to the dataset
+from sklearn.preprocessing import PolynomialFeatures
+poly_reg = PolynomialFeatures(degree = 4)
+X_poly = poly_reg.fit_transform(X)
+poly_reg.fit(X_poly, y)
+lin_reg_2 = LinearRegression()
+lin_reg_2.fit(X_poly, y)
+
+# Visualising the Linear Regression results
+plt.scatter(X, y, color = 'red')
+plt.plot(X, lin_reg.predict(X), color = 'blue')
+plt.title('Average use (Linear Regression)')
+plt.xlabel('Average daily use')
+plt.ylabel('Average temp')
+plt.show()
+
+# Visualising the Polynomial Regression results
+plt.scatter(X, y, color = 'red')
+plt.plot(X, lin_reg_2.predict(poly_reg.fit_transform(X)), color = 'blue')
+plt.title('Avg use (Polynomial Regression)')
+plt.xlabel('Avg daily temp')
+plt.ylabel('Avg daily use')
+plt.show()
+
+# Visualising the Polynomial Regression results (for higher resolution and smoother curve)
+X_grid = np.arange(min(X), max(X), 0.1)
+X_grid = X_grid.reshape((len(X_grid), 1))
+plt.scatter(X, y, color = 'red')
+plt.plot(X_grid, lin_reg_2.predict(poly_reg.fit_transform(X_grid)), color = 'blue')
+plt.title('Avg use (Polynomial Regression)')
+plt.xlabel('Avg Daily temp')
+plt.ylabel('Avg daily use')
+plt.show()
+
+# Predicting a new result with Linear Regression
+lin_reg.predict(34) #input a new temperature; output a predicted daily use
+
+# Predicting a new result with Polynomial Regression
+lin_reg_2.predict(poly_reg.fit_transform(34))#input a new temperature; output a predicted daily use
+
+#Daily use to Bill
+X2 = gas.iloc[:, 3:4].values #Average daily use column
+y2 = gas.iloc[:, 7].values   # Bill Column
+
+# Fitting Linear Regression to the dataset
+from sklearn.linear_model import LinearRegression
+lin_regB = LinearRegression()
+lin_regB.fit(X2, y2)
+
+# Fitting Polynomial Regression to the dataset
+from sklearn.preprocessing import PolynomialFeatures
+poly_regB = PolynomialFeatures(degree = 4)
+X2_poly = poly_regB.fit_transform(X2)
+poly_regB.fit(X2_poly, y2)
+lin_reg_2B = LinearRegression()
+lin_reg_2B.fit(X2_poly, y2)
+
+# Visualising the Linear Regression results
+plt.scatter(X2, y2, color = 'red')
+plt.plot(X2, lin_regB.predict(X2), color = 'blue')
+plt.title('Bill (Linear Regression)')
+plt.xlabel('Avergae use')
+plt.ylabel('Bill')
+plt.show()
+
+# Visualising the Polynomial Regression results
+plt.scatter(X2, y2, color = 'red')
+plt.plot(X2, lin_reg_2B.predict(poly_regB.fit_transform(X2)), color = 'blue')
+plt.title('Bill (Polynomial Regression)')
+plt.xlabel('Avg use')
+plt.ylabel('Bill')
+plt.show()
+
+# Visualising the Polynomial Regression results (for higher resolution and smoother curve)
+X2_grid = np.arange(min(X2), max(X2), 0.1)
+X2_grid = X2_grid.reshape((len(X2_grid), 1))
+plt.scatter(X2, y2, color = 'red')
+plt.plot(X2_grid, lin_reg_2B.predict(poly_regB.fit_transform(X2_grid)), color = 'blue')
+plt.title('Bill (Polynomial Regression)')
+plt.xlabel('Avg use')
+plt.ylabel('Bill')
+plt.show()
+
+# Predicting a new result with Linear Regression
+lin_regB.predict(7.29) #Input a new daily use; output a predicted bill amount
+
+# Predicting a new result with Polynomial Regression
+lin_reg_2B.predict(poly_regB.fit_transform(8.10)) #Input a new daily use; output a predicted bill amount
